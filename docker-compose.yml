@@ -1,0 +1,15 @@
+version: '3.2'
+services:
+
+  base:
+    build: imgs/base
+
+  test:
+    image: erbloom_base:latest
+    depends_on:
+      - base
+    volumes:
+      - "./:/project:Z"
+    tmpfs:
+      - /run
+      - /tmp
