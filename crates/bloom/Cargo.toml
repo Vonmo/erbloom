@@ -1,0 +1,14 @@
+[package]
+name = "bloom"
+version = "0.1.0"
+authors = ["Maxim Molchanov <m.molchanov@vonmo.com>"]
+license = "MIT/Apache-2.0"
+
+[lib]
+name = "bloom"
+crate-type = ["dylib"]
+
+[dependencies]
+erlang_nif-sys = ">=0.6.3"
+lazy_static = "0.1.*"
+rustler = ">=0.13.0"

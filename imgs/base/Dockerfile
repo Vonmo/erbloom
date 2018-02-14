@@ -32,6 +32,8 @@ RUN apt-get update && apt-get install -y \
     automake \
     autoconf
 
+#RUN cargo install cargo-erlangapp
+
 ADD ./docker-entry.sh /docker-entry.sh
 
 CMD ["/docker-entry.sh"]
