@@ -15,6 +15,14 @@
 
 -define(SERVER, ?MODULE).
 
+-define(CHILD(Id, Module, Type, Args), #{id => Id,
+                                         start => {Module, start_link, [Args]},
+                                         restart => permanent,
+                                         shutdown => infinity,
+                                         type => Type,
+                                         modules => [Module]}).
+
+
 %%====================================================================
 %% API functions
 %%====================================================================

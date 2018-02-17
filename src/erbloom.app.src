@@ -1,5 +1,5 @@
 {application, erbloom,
- [{description, "An OTP application"},
+ [{description, "Fast Bloom Filter"},
   {vsn, "0.1.0"},
   {registered, []},
   {mod, { erbloom_app, []}},
@@ -11,6 +11,6 @@
   {modules, []},
 
   {maintainers, []},
-  {licenses, ["Apache 2.0"]},
+  {licenses, ["MIT/Apache 2.0"]},
   {links, []}
  ]}.

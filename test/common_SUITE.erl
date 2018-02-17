@@ -39,7 +39,6 @@ end_per_group(_Group, _Config) ->
 %% group: common_app_checks
 %% =============================================================================
 app_module_load(_)->
-    ?debugVal(bloom:add(2,5)),
     {module,erbloom_app} = code:load_file(erbloom_app).
 
 sup_module_load(_)->
