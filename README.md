@@ -1,2 +1,2 @@
-# acounter
-Erlang Atomic Counter Example
+# erbloom
+Fast Bloom Filter for Erlang
