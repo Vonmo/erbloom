@@ -31,3 +31,7 @@ In Docker enviroment:
   `bloom:set(Filter, "somekey").`
 4. Check up element
   `bloom:check(Filter, "anotherkey").`
+5. Serialize
+  `bloom:serialize(Filter).`
+6. Deserialize
+  `bloom:deserialize(Filter).`
