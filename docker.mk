@@ -23,10 +23,10 @@ endif
 
 all: $(REBAR) compile
 
-compile:
+compile: $(REBAR)
 	$(REBAR) compile
 
-tests:
+tests: $(REBAR)
 	$(REBAR) as test ct --spec ./test/spec.spec
 
 tests_cover:
