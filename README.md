@@ -1,7 +1,7 @@
 # erbloom
 Safe and Fast Bloom Filter for Erlang
 
-Without docker you must install erlang 20.1 and rust 1.23 on your machine. After you can run these goals:
+Without docker you must install erlang >=20.1 and rust >=1.23 on your machine. After you can run these goals:
 
 **release:**
 `rebar3 as prod release`
