@@ -32,6 +32,6 @@ In Docker enviroment:
 4. Check up element
   `bloom:check(Filter, "anotherkey").`
 5. Serialize
-  `bloom:serialize(Filter).`
+   `{ok,{Bitmap,NumBits,NumFuns,{Sv00,Sv01},{Sv10,Sv11}}} = bloom:serialize(Filter).`
 6. Deserialize
-  `bloom:deserialize(Filter).`
+   `bloom:deserialize(Bitmap,NumBits,NumFuns,Sv00,Sv01,Sv10,Sv11).`
