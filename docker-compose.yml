@@ -1,15 +1,15 @@
 version: '3.2'
 services:
-
-  base:
-    build: imgs/base
-
   test:
-    image: erbloom_base:latest
-    depends_on:
-      - base
+    container_name: erbloom.test
+    build:
+      context: imgs/base
+      args:
+        UID: "${UID:?Please export UID}"
+        GID: "${GID:?Please export GID}"
+    user: "${UID:?Please export UID}:${GID:?Please export GID}"
     volumes:
-      - "./:/project:Z"
+      - "./:/project"
     tmpfs:
       - /run
       - /tmp

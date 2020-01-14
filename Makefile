@@ -3,7 +3,7 @@ ifeq ($(DOCKER),)
 $(error "Docker not available on this system")
 endif
 
-DOCKER_COMPOSE = $(shell which docker-compose)
+DOCKER_COMPOSE = UID=`id -u` GID=`id -g` $(shell which docker-compose)
 ifeq ($(DOCKER_COMPOSE),)
 $(error "DockerCompose not available on this system")
 endif

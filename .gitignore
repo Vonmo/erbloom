@@ -8,3 +8,4 @@ ebin/*.beam
 .rebar
 _build
 rebar3
+.idea
