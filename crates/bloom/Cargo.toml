@@ -9,7 +9,5 @@ name = "bloom"
 crate-type = ["dylib"]
 
 [dependencies]
-erlang_nif-sys = ">=0.6.3"
-lazy_static = "0.1.*"
 rustler = ">=0.13.0"
-bloomfilter = "0.0.12"
+bloomfilter = "1"
