@@ -3,9 +3,10 @@ extern crate bloomfilter;
 extern crate rustler;
 
 use bloomfilter::Bloom;
-use rustler::{Encoder, Env, NifResult, Term};
+use rustler::{Encoder, Env, NifResult, Term, OwnedBinary, Binary};
 use rustler::resource::ResourceArc;
 use std::sync::RwLock;
+use std::io::Write;
 
 mod atoms {
     rustler_atoms! {
@@ -14,19 +15,19 @@ mod atoms {
 }
 
 struct FilterResource {
-    filter: RwLock<Bloom <Vec<u8>>>,
-    bit_size: usize,
-    items_count: usize,
+    filter: RwLock<Bloom <Vec<u8>>>
 }
 
 rustler_export_nifs!(
     "bloom",
     [
         ("new", 2, new),
+        ("new_for_fp_rate", 2, new_for_fp_rate),
         ("serialize", 1, serialize),
         ("deserialize", 7, deserialize),
         ("set", 2, set),
         ("check", 2, check),
+        ("check_and_set", 2, check_and_set),
         ("clear", 1, clear),
     ],
     Some(on_load)
@@ -44,21 +45,36 @@ fn new<'a>(env: Env<'a>, args: &[Term<'a>]) -> NifResult<Term<'a>> {
     let resource = ResourceArc::new(FilterResource {
         filter: RwLock::new(
             Bloom::new(bitmap_size as usize, items_count as usize)
-        ),
-        bit_size: bitmap_size as usize,
-        items_count: items_count as usize,
+        )
     });
 
     Ok((atoms::ok(), resource.encode(env)).encode(env))
 }
+
+fn new_for_fp_rate<'a>(env: Env<'a>, args: &[Term<'a>]) -> NifResult<Term<'a>> {
+    let items_count: i64 = args[0].decode()?;
+    let fp_p: f64 = args[1].decode()?;
+
+    let resource = ResourceArc::new(FilterResource {
+        filter: RwLock::new(
+            Bloom::new_for_fp_rate(items_count as usize, fp_p)
+        )
+    });
+
+    Ok((atoms::ok(), resource).encode(env))
+}
+
 
 fn serialize<'a>(env: Env<'a>, args: &[Term<'a>]) -> NifResult<Term<'a>> {
     let resource: ResourceArc<FilterResource> = args[0].decode()?;
 
     let filter = resource.filter.read().unwrap();
     let sips = filter.sip_keys();
+    let bitmap = filter.bitmap();
+    let mut binary = OwnedBinary::new(bitmap.len()).unwrap();
+    binary.as_mut_slice().write_all(&bitmap).unwrap();
 
-    Ok((atoms::ok(), (&filter.bitmap(),
+    Ok((atoms::ok(), (Binary::from_owned(binary, env),
                       filter.number_of_bits(),
                       filter.number_of_hash_functions(),
                       sips[0],
@@ -66,7 +82,7 @@ fn serialize<'a>(env: Env<'a>, args: &[Term<'a>]) -> NifResult<Term<'a>> {
 }
 
 fn deserialize<'a>(env: Env<'a>, args: &[Term<'a>]) -> NifResult<Term<'a>> {
-    let bitmap: Vec<u8> = args[0].decode()?;
+    let bitmap: Binary = args[0].decode()?;
     let num_bits: u64 = args[1].decode()?;
     let num_funs: u32 = args[2].decode()?;
     let sip00: u64 = args[3].decode()?;
@@ -80,12 +96,10 @@ fn deserialize<'a>(env: Env<'a>, args: &[Term<'a>]) -> NifResult<Term<'a>> {
             num_bits,
             num_funs,
             [(sip00, sip01), (sip10, sip11)],
-        )),
-        bit_size: num_bits as usize,
-        items_count: num_funs as usize,
+        ))
     });
 
-    Ok((atoms::ok(), resource.encode(env)).encode(env))
+    Ok((atoms::ok(), resource).encode(env))
 }
 
 fn set<'a>(env: Env<'a>, args: &[Term<'a>]) -> NifResult<Term<'a>> {
@@ -95,7 +109,7 @@ fn set<'a>(env: Env<'a>, args: &[Term<'a>]) -> NifResult<Term<'a>> {
     let mut filter = resource.filter.write().unwrap();
     (*filter).set(&key);
 
-    Ok((atoms::ok(), resource.encode(env)).encode(env))
+    Ok(atoms::ok().encode(env))
 }
 
 fn check<'a>(env: Env<'a>, args: &[Term<'a>]) -> NifResult<Term<'a>> {
@@ -104,19 +118,23 @@ fn check<'a>(env: Env<'a>, args: &[Term<'a>]) -> NifResult<Term<'a>> {
 
     let filter = resource.filter.read().unwrap();
 
-    Ok((atoms::ok(), filter.check(&key)).encode(env))
+    Ok(filter.check(&key).encode(env))
+}
+
+fn check_and_set<'a>(env: Env<'a>, args: &[Term<'a>]) -> NifResult<Term<'a>> {
+    let resource: ResourceArc<FilterResource> = args[0].decode()?;
+    let key: Vec<u8> = args[1].decode()?;
+
+    let mut filter = resource.filter.write().unwrap();
+
+    Ok(filter.check_and_set(&key).encode(env))
 }
 
 fn clear<'a>(env: Env<'a>, args: &[Term<'a>]) -> NifResult<Term<'a>> {
     let resource: ResourceArc<FilterResource> = args[0].decode()?;
 
-    let new_resource = ResourceArc::new(FilterResource {
-        filter: RwLock::new(
-            Bloom::new(resource.bit_size, resource.items_count),
-        ),
-        bit_size: resource.bit_size,
-        items_count: resource.items_count,
-    });
+    let mut filter = resource.filter.write().unwrap();
+    (*filter).clear();
 
-    Ok((atoms::ok(), new_resource.encode(env)).encode(env))
+    Ok(atoms::ok().encode(env))
 }
