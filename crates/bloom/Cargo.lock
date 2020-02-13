@@ -31,6 +31,7 @@ version = "0.1.0"
 dependencies = [
  "bloomfilter 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "rustler 0.21.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "siphasher 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]

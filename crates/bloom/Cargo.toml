@@ -11,3 +11,4 @@ crate-type = ["dylib"]
 [dependencies]
 rustler = ">=0.13.0"
 bloomfilter = "1"
+siphasher = "*"
