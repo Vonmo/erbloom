@@ -14,7 +14,7 @@ groups() ->
     [
         {bloom,
             [parallel, shuffle],
-                [new, serialize, deserialize, set, check, clear]},
+                [new, serialize, deserialize, set, check, check_and_set, clear, to_from_bin]},
 
         {perf,
             [shuffle],
@@ -84,6 +84,23 @@ check(_) ->
     false = bloom:check(Ref, Key),
     ok = bloom:set(Ref, Key),
     true = bloom:check(Ref, Key),
+    %% we can check a serialized bloom
+    {ok, Ser} = bloom:serialize(Ref),
+    true = bloom:check(Ser, Key),
+    %% we can check a to_bin bloom
+    Bin = bloom:to_bin(Ref),
+    true = bloom:check(Bin, Key),
+    ok.
+
+check_and_set(_) ->
+    Key = "binkeyfortest",
+    {ok, Ref} = bloom:new(10,80),
+    false = bloom:check_and_set(Ref, Key),
+    true = bloom:check(Ref, Key),
+    true = bloom:check_and_set(Ref, Key),
+    bloom:clear(Ref),
+    false = bloom:check(Ref, Key),
+    false = bloom:check_and_set(Ref, Key),
     ok.
 
 clear(_) ->
@@ -95,6 +112,23 @@ clear(_) ->
     false = bloom:check(Ref, Key),
     ok.
 
+to_from_bin(_) ->
+    Key = <<"binkeyfortest">>,
+    Key2 = <<"binkeyfortestingmore">>,
+    {ok, Ref} = bloom:new(10,80),
+    false = bloom:check(Ref, Key),
+    ok = bloom:set(Ref, Key),
+    true = bloom:check(Ref, Key),
+    Bin = bloom:to_bin(Ref),
+    true = bloom:check(Bin, Key),
+    false = bloom:check(Bin, Key2),
+    {ok, Ref2} = bloom:from_bin(Bin),
+    true = bloom:check(Ref2, Key),
+    false = bloom:check(Ref2, Key2),
+    bloom:set(Ref2, Key2),
+    true = bloom:check(Ref2, Key2),
+    false = bloom:check(Bin, Key2),
+    ok.
 
 %% =============================================================================
 %% group: perf
