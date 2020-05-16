@@ -5,15 +5,20 @@
 %% API
 -export([new/2,
          new_for_fp_rate/2,
+         new_forgetful/4,
+         new_forgetful_for_fp_rate/4,
          serialize/1,
          deserialize/1,
          deserialize/7,
          to_bin/1,
          from_bin/1,
          set/2,
+         set_forgetful/2,
          check/2,
+         check_forgetful/2,
          check_and_set/2,
-         clear/1
+         clear/1,
+         clear_forgetful/1
          ]).
 
 %% Native library support
@@ -39,6 +44,14 @@ new(_BitmapSize, _ItemsCount) ->
 %% @doc Create a new bloom filter structure. `ItemsCount' is an estimation of the maximum number of items to store. `FalsePositiveRate' is the wanted rate of false positives, in ]0.0, 1.0[.
 -spec new_for_fp_rate(ItemsCount :: pos_integer(), FalsePositiveRate :: float()) -> {ok, Bloom :: bloom()}.
 new_for_fp_rate(_ItemsCount, _FP_Rate) ->
+    not_loaded(?LINE).
+
+%% @private
+new_forgetful(_BitmapSize, _ItemCount, _Capacity, _RotateAfter) ->
+    not_loaded(?LINE).
+
+%% @private
+new_forgetful_for_fp_rate(_ItemCount, _FalsePositiveRate, _Capacity, _RotateAfter) ->
     not_loaded(?LINE).
 
 %% @doc Serialize a bloom filter to Erlang terms. `check/2' can be used against this serialized form efficently.
@@ -75,6 +88,10 @@ deserialize(_Bitmap, _NumBits, _NumFuns, _Sv00, _Sv01, _Sv10, _Sv11) ->
 set(_Ref, _Key) ->
     not_loaded(?LINE).
 
+%% @private
+set_forgetful(_Bloom, _Key) ->
+    not_loaded(?LINE).
+
 %% @doc Check for the presence of `Key' in `Bloom'.
 %% Serialized and binary encoded bloom filters can be used with this
 %% function when you wish to check for the key and do not need to use set
@@ -89,6 +106,10 @@ check(<<?ERBLOOM_VERSION1:8/integer, NumBits:64/integer-unsigned-little, NumFuns
 check({Bitmap,NumBits,NumFuns,{Sv00,Sv01},{Sv10,Sv11}}, Key) ->
     check_nif(Bitmap, NumBits, NumFuns, Sv00, Sv01, Sv10, Sv11, Key).
 
+%% @private
+check_forgetful(_Bloom, _Key) ->
+    not_loaded(?LINE).
+
 %% @doc Record the presence of `Key' in `Bloom' and return whether it was present before.
 -spec check_and_set(Bloom :: bloom(), Key :: term()) -> boolean().
 check_and_set(_Ref, _Key) ->
@@ -97,6 +118,10 @@ check_and_set(_Ref, _Key) ->
 %% @doc Clear all of the bits in the filter, removing all keys from the set.
 -spec clear(Bloom :: bloom()) -> ok.
 clear(_Ref) ->
+    not_loaded(?LINE).
+
+%% @private
+clear_forgetful(_Ref) ->
     not_loaded(?LINE).
 
 check_nif(_Ref, _Key) ->
