@@ -14,7 +14,7 @@ groups() ->
     [
         {bloom,
             [parallel, shuffle],
-                [new, serialize, deserialize, set, check, check_and_set, clear, to_from_bin]},
+                [new, serialize, deserialize, set, check, check_and_set, clear, to_from_bin, forgetful]},
 
         {perf,
             [shuffle],
@@ -128,6 +128,30 @@ to_from_bin(_) ->
     bloom:set(Ref2, Key2),
     true = bloom:check(Ref2, Key2),
     false = bloom:check(Bin, Key2),
+    ok.
+
+forgetful(_) ->
+    {ok, Ref} = forgetful_bloom:new(50,80,3,1),
+    Key = <<"binkeyfortest">>,
+    Key2 = <<"binkeyfortestingmore">>,
+    Key3 = <<"icanseemygousefromhere">>,
+    Key4 = <<"icantbelieveitsnotbutter">>,
+    Key5 = <<"myhovercraftisfullofeels">>,
+    Key6 = <<"ivefallenandicantgetup">>,
+    Keys = [Key, Key2, Key3, Key4, Key5, Key6],
+    [] = [K || K <- Keys, forgetful_bloom:check(Ref, K)],
+    false = forgetful_bloom:set(Ref, Key),
+    ?assertEqual([Key], [K || K <- Keys, forgetful_bloom:check(Ref, K)]),
+    false = forgetful_bloom:set(Ref, Key2),
+    ?assertEqual([Key, Key2], [K || K <- Keys, forgetful_bloom:check(Ref, K)]),
+    false = forgetful_bloom:set(Ref, Key3),
+    ?assertEqual([Key, Key2, Key3], [K || K <- Keys, forgetful_bloom:check(Ref, K)]),
+    false = forgetful_bloom:set(Ref, Key4),
+    ?assertEqual([Key2, Key3, Key4], [K || K <- Keys, forgetful_bloom:check(Ref, K)]),
+    false = forgetful_bloom:set(Ref, Key5),
+    ?assertEqual([Key3, Key4, Key5], [K || K <- Keys, forgetful_bloom:check(Ref, K)]),
+    false = forgetful_bloom:set(Ref, Key6),
+    ?assertEqual([Key4, Key5, Key6], [K || K <- Keys, forgetful_bloom:check(Ref, K)]),
     ok.
 
 %% =============================================================================
