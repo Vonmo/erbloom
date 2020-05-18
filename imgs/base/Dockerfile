@@ -1,10 +1,10 @@
-FROM erlang:22.2 AS erlang
-FROM rust:1.40.0 AS rust
-FROM debian:10.2
+FROM erlang:23.0 AS erlang
+FROM rust:1.43.1 AS rust
+FROM debian:10.4-slim
 
 LABEL author="elzor"
 LABEL maintainer="m.molchanov@vonmo.com"
-LABEL version="1.0"
+LABEL version="1.1"
 LABEL description="image for erbloom"
 
 ENV USER=erbloom
@@ -33,19 +33,11 @@ ENV RUSTUP_HOME=/usr/local/rustup \
 RUN apt-get update && apt-get install --no-install-recommends -y \
     apt-transport-https \
     ca-certificates \
-    wget \
-    curl \
-    lsof \
-    telnet \
     build-essential \
-    git \
     openssl \
     libssl-dev \
     libncurses6 \
     libncurses-dev \
-    xsltproc \
-    automake \
-    autoconf \
     locales \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists /var/cache/apt \
