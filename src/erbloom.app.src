@@ -1,5 +1,6 @@
 {application, erbloom,
- [{description, "Fast Bloom Filter"},
+ [{pkg_name, erbloom},
+  {description, "Fast Bloom Filter"},
   {vsn, git},
   {registered, []},
   {applications,
@@ -9,7 +10,7 @@
   {env,[]},
   {modules, []},
 
-  {maintainers, []},
+  {maintainers, ["Maxim Molchanov"]},
   {licenses, ["MIT/Apache 2.0"]},
-  {links, []}
+  {links, [{"GitHub", "https://github.com/Vonmo/erbloom"}]}
  ]}.
