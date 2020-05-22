@@ -1,6 +1,6 @@
 [package]
 name = "bloom"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Maxim Molchanov <m.molchanov@vonmo.com>"]
 license = "MIT/Apache-2.0"
 
@@ -9,6 +9,8 @@ name = "bloom"
 crate-type = ["dylib"]
 
 [dependencies]
-rustler = ">=0.13.0"
-bloomfilter = "1"
-siphasher = "*"
+bincode = "1.2.1"
+rustler = "0.22.0-rc.0"
+bloomfilter = "1.0.2"
+siphasher = "0.3.3"
+serde = { version = "1.0", features = ["derive"] }
