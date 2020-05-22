@@ -34,6 +34,7 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
     apt-transport-https \
     ca-certificates \
     build-essential \
+    git \
     openssl \
     libssl-dev \
     libncurses6 \

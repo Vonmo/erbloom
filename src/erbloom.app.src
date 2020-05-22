@@ -1,7 +1,7 @@
 {application, erbloom,
  [{pkg_name, erbloom},
   {description, "Fast Bloom Filter"},
-  {vsn, git},
+  {vsn, 'v2.1.0'},
   {registered, []},
   {applications,
    [kernel,
@@ -11,6 +11,11 @@
   {modules, []},
 
   {maintainers, ["Maxim Molchanov"]},
-  {licenses, ["MIT/Apache 2.0"]},
-  {links, [{"GitHub", "https://github.com/Vonmo/erbloom"}]}
+  {licenses, ["MIT", "Apache-2.0"]},
+  {links, [{"GitHub", "https://github.com/Vonmo/erbloom"}]},
+  {files, [
+    "priv", "src", "crates",
+    "rebar.config", "rebar.lock",
+    "LICENSE", "README.md"
+  ]}
  ]}.
