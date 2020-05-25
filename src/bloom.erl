@@ -14,9 +14,13 @@
   deserialize/1
   ]).
 
-%% @doc Create a new bloom filter structure.
-%% `BitmapSize` is the size in bytes (not bits) that will be allocated in memory
-%% `ItemsCount` is an estimation of the maximum number of items to store.
+%% ----------------------------------------------------------------------------
+%% @doc
+%% Create a new bloom filter structure.
+%% `BitmapSize' is the size in bytes (not bits) that will be allocated in memory
+%% `ItemsCount' is an estimation of the maximum number of items to store.
+%% @end
+%% ----------------------------------------------------------------------------
 -spec new(BitmapSize :: pos_integer(), ItemsCount :: pos_integer()) -> {ok, Bloom :: bloom_nif:bloom()}.
 new(BitmapSize, ItemsCount) ->
   bloom_nif:new(#{
@@ -25,9 +29,13 @@ new(BitmapSize, ItemsCount) ->
     items_count => ItemsCount
   }).
 
-%% @doc Create a new bloom filter structure.
-%% `ItemsCount` is an estimation of the maximum number of items to store.
-%% `FalsePositiveRate` is the wanted rate of false positives, in [0.0, 1.0].
+%% ----------------------------------------------------------------------------
+%% @doc
+%% Create a new bloom filter structure.
+%% `ItemsCount' is an estimation of the maximum number of items to store.
+%% `FalsePositiveRate' is the wanted rate of false positives, in [0.0, 1.0].
+%% @end
+%% ----------------------------------------------------------------------------
 -spec new_optimal(ItemsCount :: pos_integer(), FalsePositiveRate :: float()) -> {ok, Bloom :: bloom_nif:bloom()}.
 new_optimal(ItemsCount, FalsePositiveRate) when FalsePositiveRate >= 0.0 andalso FalsePositiveRate =< 1.0 ->
   bloom_nif:new(#{
@@ -36,11 +44,15 @@ new_optimal(ItemsCount, FalsePositiveRate) when FalsePositiveRate >= 0.0 andalso
     fp_rate => FalsePositiveRate
   }).
 
-%% @doc Create a new forgetful bloom filter structure.
-%% `BitmapSize` is the size in bytes (not bits) that will be allocated in memory
-%% `ItemsCount` is an estimation of the maximum number of items to store,
-%% `NumFilters` is the number of filters to maintain (minimum of 3) and
-%% `RotateAfter` is how many insertions to do into a filter before rotating a blank filter into the `future' position.
+%% ----------------------------------------------------------------------------
+%% @doc
+%% Create a new forgetful bloom filter structure.
+%% `BitmapSize' is the size in bytes (not bits) that will be allocated in memory
+%% `ItemsCount' is an estimation of the maximum number of items to store,
+%% `NumFilters' is the number of filters to maintain (minimum of 3) and
+%% `RotateAfter' is how many insertions to do into a filter before rotating a blank filter into the `future' position.
+%% @end
+%% ----------------------------------------------------------------------------
 -spec new_forgetful(BitmapSize :: pos_integer(), ItemsCount :: pos_integer(), NumFilters :: pos_integer(), RotateAfter :: pos_integer())
       -> {ok, Bloom :: bloom_nif:bloom()}.
 new_forgetful(BitmapSize, ItemsCount, NumFilters, RotateAfter) when NumFilters > 2 ->
@@ -52,12 +64,16 @@ new_forgetful(BitmapSize, ItemsCount, NumFilters, RotateAfter) when NumFilters >
     rotate_at => RotateAfter
   }).
 
-%% @doc Create a new forgetful bloom filter structure.
-%% `BitmapSize` is the size in bytes (not bits) that will be allocated in memory
-%% `ItemsCount` is an estimation of the maximum number of items to store,
-%% `NumFilters` is the number of filters to maintain (minimum of 3) and
-%% `RotateAfter` is how many insertions to do into a filter before rotating a blank filter into the `future' position.
-%% `FalsePositiveRate` is the wanted rate of false positives, in [0.0, 1.0].
+%% ----------------------------------------------------------------------------
+%% @doc
+%% Create a new forgetful bloom filter structure.
+%% `BitmapSize' is the size in bytes (not bits) that will be allocated in memory
+%% `ItemsCount' is an estimation of the maximum number of items to store,
+%% `NumFilters' is the number of filters to maintain (minimum of 3) and
+%% `RotateAfter' is how many insertions to do into a filter before rotating a blank filter into the `future' position.
+%% `FalsePositiveRate' is the wanted rate of false positives, in [0.0, 1.0].
+%% @end
+%% ----------------------------------------------------------------------------
 -spec new_forgetful_optimal(ItemsCount :: pos_integer(), NumFilters :: pos_integer(), RotateAfter :: pos_integer(), FalsePositiveRate :: float())
       -> {ok, Bloom :: bloom_nif:bloom()}.
 new_forgetful_optimal(ItemsCount, NumFilters, RotateAfter, FalsePositiveRate) when NumFilters > 2 andalso FalsePositiveRate >= 0.0 andalso FalsePositiveRate =< 1.0 ->
@@ -69,45 +85,72 @@ new_forgetful_optimal(ItemsCount, NumFilters, RotateAfter, FalsePositiveRate) wh
     fp_rate => FalsePositiveRate
   }).
 
-
-%% @doc Record the presence of `Key` in `Bloom` and `ForgetfulBloom`
-%% For `ForgetfulBloom` a boolean is returned to indicate if the value was already present (like `check_and_set/2`).
+%% ----------------------------------------------------------------------------
+%% @doc
+%% Record the presence of `Key' in `Bloom' and `ForgetfulBloom'
+%% For `ForgetfulBloom' a boolean is returned to indicate if the value was already present (like `check_and_set/2').
+%% @end
+%% ----------------------------------------------------------------------------
 -spec set(Bloom :: bloom_nif:bloom(), Key :: term()) -> ok | boolean().
 set(Bloom, Key) ->
   bloom_nif:set(Bloom, Key).
 
-%% @doc Check for the presence of `Key` in `Bloom`.
+%% ----------------------------------------------------------------------------
+%% @doc
+%% Check for the presence of `Key' in `Bloom'.
 %% Serialized and binary encoded bloom filters can be used with this
 %% function when you wish to check for the key and do not need to use set
 %% (eg. a static bloom filter stored in a database).
+%% @end
+%% ----------------------------------------------------------------------------
 -spec check(Bloom :: bloom_nif:bloom() | bloom_nif:serialized_bloom(), Key :: term()) -> boolean().
 check(Bloom, Key) ->
   bloom_nif:check(Bloom, Key).
 
-%% @doc Record the presence of `Key` in `Bloom` or `ForgetfulBloom`
+%% ----------------------------------------------------------------------------
+%% @doc
+%% Record the presence of `Key' in `Bloom' or `ForgetfulBloom'
 %% and return whether it was present before.
+%% @end
+%% ----------------------------------------------------------------------------
 -spec check_and_set(Bloom :: bloom_nif:bloom(), Key :: term()) -> boolean().
 check_and_set(Bloom, Key) ->
   bloom_nif:check_and_set(Bloom, Key).
 
-%% @doc Clear all of the bits in the filter, removing all keys from the set.
+%% ----------------------------------------------------------------------------
+%% @doc
+%% Clear all of the bits in the filter, removing all keys from the set.
+%% @end
+%% ----------------------------------------------------------------------------
 -spec clear(Bloom :: bloom_nif:bloom()) -> ok.
 clear(Bloom) ->
   bloom_nif:clear(Bloom).
 
-%% @doc Get type of filter
+%% ----------------------------------------------------------------------------
+%% @doc
+%% Get type of filter.
+%% @end
+%% ----------------------------------------------------------------------------
 -spec type(Bloom :: bloom_nif:bloom()) -> number() | {error, Reason :: binary()}.
 type(Bloom) ->
   bloom_nif:ftype(Bloom).
 
-%% @doc Serialize a bloom filter to binary.
+%% ----------------------------------------------------------------------------
+%% @doc
+%% Serialize a bloom filter to binary.
 %% `check/2' can be used against this serialized form efficiently.
+%% @end
+%% ----------------------------------------------------------------------------
 -spec serialize(Bloom :: bloom_nif:bloom()) -> {ok, bloom_nif:serialized_bloom()}.
 serialize(Bloom) ->
   bloom_nif:serialize(Bloom).
 
-%% @doc Deserialize a previously serialized bloom filter back
+%% ----------------------------------------------------------------------------
+%% @doc
+%% Deserialize a previously serialized bloom filter back
 %% into a bloom filter reference.
+%% @end
+%% ----------------------------------------------------------------------------
 -spec deserialize(SerializedBloom :: bloom_nif:serialized_bloom()) -> {ok, bloom_nif:bloom()}.
 deserialize(SerializedBloom) ->
   bloom_nif:deserialize(SerializedBloom).

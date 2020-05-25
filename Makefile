@@ -13,6 +13,8 @@ ifeq (env.mk,$(wildcard env.mk))
 	include env.mk
 endif
 
+.PHONY: deps doc
+
 all: build_imgs up tests rel
 
 build_imgs:
@@ -32,6 +34,10 @@ tests:
 rel:
 	@echo "Build release..."
 	@${DOCKER_COMPOSE} exec test bash -c "cd /project && make -f docker.mk prod"
+
+doc:
+	@echo "Generate docs..."
+	@${DOCKER_COMPOSE} exec test bash -c "cd /project && make -f docker.mk doc"
 
 lint:
 	@echo "Lint..."

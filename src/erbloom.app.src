@@ -1,7 +1,7 @@
 {application, erbloom,
  [{pkg_name, erbloom},
   {description, "Fast Bloom Filter"},
-  {vsn, 'v2.1.0'},
+  {vsn, git},
   {registered, []},
   {applications,
    [kernel,
@@ -16,6 +16,6 @@
   {files, [
     "priv", "src", "crates",
     "rebar.config", "rebar.lock",
-    "LICENSE", "README.md"
+    "doc", "LICENSE", "README.md"
   ]}
  ]}.

@@ -1,0 +1,79 @@
+-*- html -*-
+
+	erbloom overview page
+
+
+@author Maxim Molchanov <m.molchanov@vonmo.com>
+@copyright 2018-2020 Maxim Molchanov
+@version 2.1.0
+@title Safe and Fast Bloom Filter
+@doc erbloom is a safe and fast Bloom filter (Including Forgetful filters and False Positive Rate option) for Erlang/Elixir
+
+<b>Updated</b>: {@date}
+
+== Contents ==
+
+<ol>
+  <li>{@section Using as a lib}</li>
+  <li>{@section API overview}</li>
+  <li>{@section Docker-based sandbox}</li>
+  <li>{@section Contributors}</li>
+</ol>
+
+== Using as a lib in Erlang ==
+
+<b>rebar.conf:</b><br/>
+{erbloom, "2.1.0-rc.0"}
+<br/>or<br/>
+{erbloom, ".*", {git, "https://github.com/Vonmo/erbloom.git", {tag, "v2.1.0"}}}
+
+<b>erlang.mk:</b><br/>
+dep_erbloom = hex 2.1.0-rc.0
+
+<b>mix.exs:</b><br/>
+{:erbloom, "~> 2.1.0-rc.0"}
+
+== Workflow ==
+Now you can create a new filter instance:<br/>
+{ok, Filter} = {@link bloom:new/2. <b>bloom:new</b>}(9585059,1000000).
+or filter with wanted rate of false positives: {@link bloom:new_optimal/2. <b>bloom:new_optimal</b>}(1000000, 0.55).
+
+Create a new forgetful filter:<br/>
+{ok, Filter} = {@link bloom:new_forgetful/4. <b>bloom:new_forgetful</b>}(BitmapSize, ItemsCount, NumFilters, RotateAfter).
+or with fp_rate: {@link bloom:new_forgetful_optimal/4. <b>bloom:new_forgetful_optimal</b>}(ItemsCount, NumFilters, RotateAfter, FpRate).
+
+Set a new element:<br/>
+ok | true = {@link bloom:set/2. <b>bloom:set</b>}(Filter, "somekey").
+
+Check up element:<br/>
+true | false = {@link bloom:check/2. <b>bloom:check</b>}(Filter, "anotherkey").
+
+Serialize:<br/>
+{ok, Binary} = {@link bloom:serialize/1. <b>bloom:serialize</b>}(Filter).
+
+Deserialize:<br/>
+{@link bloom:deserialize/1. <b>bloom:deserialize</b>}(Binary).
+
+== Docker-based sandbox ==
+
+<i>make build_imgs</i> - build docker images
+
+<i>make up</i> - run sandbox
+
+<i>make down</i> - terminate sandbox
+
+<i>make tests</i> - run tests
+
+<i>make lint</i> - linter
+
+<i>make xref</i> - xref analysis
+
+<i>make prod</i> - generate release for target
+
+<i>make doc</i> - generate documentation from EDoc
+
+== Contributors ==
+<ul>
+  <li><a href="https://github.com/Vagabond" target="_blank">Andrew Thompson</a></li>
+  <li><a href="https://github.com/russelldb" target="_blank">Russell Brown</a></li>
+</ul>

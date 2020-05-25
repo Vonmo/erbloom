@@ -19,7 +19,7 @@ Safe and Fast Bloom Filter for Erlang
 3. Create a new forgetful filter:
    `{ok, Filter} = bloom:new_forgetful(BitmapSize, ItemsCount, NumFilters, RotateAfter).`
    or with fp_rate:
-   `bloom:new_forgetful(ItemsCount, NumFilters, RotateAfter, FpRate).`
+   `bloom:new_forgetful_optimal(ItemsCount, NumFilters, RotateAfter, FpRate).`
 3. Set a new element
   `bloom:set(Filter, "somekey").`
 4. Check up element
@@ -37,6 +37,7 @@ Safe and Fast Bloom Filter for Erlang
 * `make lint` - linter
 * `make xref` - xref analysis
 * `make prod` - generate release for target
+* `make doc` - generate documentation from EDoc
 
 ##
 Without docker you must install erlang >=20.1 and rust >=1.23 on your machine. After you can run these goals:

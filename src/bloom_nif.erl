@@ -1,6 +1,8 @@
-%% @doc This is a NIF wrapper around [https://crates.io/crates/bloomfilter],
+%% @doc
+%% This is a NIF wrapper around [https://crates.io/crates/bloomfilter],
 %% a simple but fast Bloom filter implementation, that requires only 2 hash functions,
 %% generated with SipHash-1-3 using randomized keys.
+%% @end
 
 -module(bloom_nif).
 %% API

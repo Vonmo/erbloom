@@ -18,7 +18,7 @@ ifeq (env.mk,$(wildcard env.mk))
 	include env.mk
 endif
 
-.PHONY: deps
+.PHONY: deps doc
 
 all: compile
 
@@ -34,6 +34,9 @@ tests_cover:
 cover:
 	@$(REBAR) cover
 	@xdg-open "_build/test/cover/index.html"
+
+doc:
+	$(REBAR) edoc
 
 lint:
 	$(REBAR) as lint lint
