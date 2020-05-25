@@ -1,6 +1,8 @@
 # erbloom
 Safe and Fast Bloom Filter for Erlang
 
+[Online Documentation](https://hexdocs.pm/erbloom/)
+
 ## Features:
 * [Bloom filter structure](https://en.wikipedia.org/wiki/Bloom_filter) (type: `bloom`)
 * [Forgetful Bloom Filters](http://dprg.cs.uiuc.edu/docs/fbf_cac15/fbfpaper-2.pdf) (type: `fbf`)
