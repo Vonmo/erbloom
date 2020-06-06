@@ -9,6 +9,16 @@ Safe and Fast Bloom Filter + FBFs for Erlang
 * [Bloom filter structure](https://en.wikipedia.org/wiki/Bloom_filter) (type: `bloom`)
 * [Forgetful Bloom Filters](http://dprg.cs.uiuc.edu/docs/fbf_cac15/fbfpaper-2.pdf) (type: `fbf`)
 
+## Deps definition:
+mix.exs:
+`{:erbloom, "~> 2.1.0-rc.2"}`
+
+rebar.config:
+`{erbloom, "2.1.0-rc.2"}`
+
+erlang.mk:
+`dep_erbloom = hex 2.1.0-rc.2`
+
 ## Using as a lib
 1. Add deps in rebar.conf:
   ```
