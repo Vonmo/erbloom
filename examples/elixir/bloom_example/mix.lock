@@ -1,0 +1,3 @@
+%{
+  "erbloom": {:hex, :erbloom, "2.1.0-rc.2", "e54ebd0e8aaa4bca16730a2cd675f75b321285cc86fca83b857ae23d98911c1a", [:rebar3], [], "hexpm", "7ab852222d0f94af88b46d633bc000df5ecf0f0d23be6dd548b03cf71e03600d"},
+}
