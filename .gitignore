@@ -7,5 +7,5 @@ ebin/*.beam
 .concrete/DEV_MODE
 .rebar
 _build
-rebar3
+./rebar3
 .idea
