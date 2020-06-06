@@ -1,5 +1,5 @@
 # erbloom
-Safe and Fast Bloom Filter for Erlang
+Safe and Fast Bloom Filter + FBFs for Erlang
 
 [Online Documentation](https://hexdocs.pm/erbloom/)
 
@@ -11,7 +11,7 @@ Safe and Fast Bloom Filter for Erlang
 1. Add deps in rebar.conf:
   ```
   {deps, [
-      {erbloom, ".*", {git, "https://github.com/Vonmo/erbloom.git", {tag, "v2.0.0"}}}      
+      {erbloom, ".*", {git, "https://github.com/Vonmo/erbloom.git", {tag, "v2.0.2"}}}      
   ]}
   ```
 2. Now you can create a new filter instance:
