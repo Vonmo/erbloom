@@ -2,8 +2,9 @@ use std::error;
 
 use bloomfilter::Bloom;
 
-use container::{FilterType, RawSerializedFilter, SerializedFilter};
+use container::{RawSerializedFilter, SerializedFilter};
 use options::FilterOptions;
+use super::FilterType;
 
 type Result<T> = std::result::Result<T, Box<dyn error::Error>>;
 
@@ -42,7 +43,7 @@ impl ForgetfulFilter {
         forgetfulfilter
     }
 
-    pub fn set(&mut self, key: &Vec<u8>) -> bool {
+    pub fn set(&mut self, key: &[u8]) -> bool {
         let num_inner_filters = self.filters.len();
 
         // check membership
@@ -76,7 +77,7 @@ impl ForgetfulFilter {
         member
     }
 
-    pub fn check(&self, key: &Vec<u8>) -> bool {
+    pub fn check(&self, key: &[u8]) -> bool {
         let num_inner_filters = self.filters.len();
         // check the overlapping blooms 2 by 2
         for x in 0..num_inner_filters - 2 {

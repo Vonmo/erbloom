@@ -1,32 +1,34 @@
 use std::io::Write;
-use std::sync::RwLock;
+use std::sync::{RwLock, RwLockReadGuard, RwLockWriteGuard};
 
-use rustler::{Binary, Encoder, Env, MapIterator, NifResult, OwnedBinary, Term};
 use rustler::resource::ResourceArc;
+use rustler::{Binary, Encoder, Env, MapIterator, NifResult, OwnedBinary, Term};
 
 use atoms::{bindecode, binencode, error, ok, wrong_filter_type};
-use bloom::BloomFilter;
-use container::{FilterContainer, FilterType, SerializedFilter};
-use forgetful::ForgetfulFilter;
+use filter::{BloomFilter, Filter, FilterType};
+use container::SerializedFilter;
 use options::FilterOptions;
 
 // =================================================================================================
 // resource
 // =================================================================================================
 
-struct FilterResource {
-    current_type: FilterType,
-    bloom: RwLock<FilterContainer<BloomFilter>>,
-    forgetful: RwLock<FilterContainer<ForgetfulFilter>>,
+#[repr(transparent)]
+struct FilterResource(RwLock<Filter>);
+
+impl FilterResource {
+    fn read(&self) -> RwLockReadGuard<'_, Filter> {
+        self.0.read().unwrap()
+    }
+
+    fn write(&self) -> RwLockWriteGuard<'_, Filter> {
+        self.0.write().unwrap()
+    }
 }
 
-impl Default for FilterResource {
-    fn default() -> FilterResource {
-        FilterResource {
-            current_type: FilterType::Bloom,
-            bloom: RwLock::new(FilterContainer::new(BloomFilter::new(FilterOptions::default()))),
-            forgetful: RwLock::new(FilterContainer::new(ForgetfulFilter::new(FilterOptions::default()))),
-        }
+impl From<Filter> for FilterResource {
+    fn from(other: Filter) -> Self {
+        FilterResource(RwLock::new(other))
     }
 }
 
@@ -49,7 +51,7 @@ fn new<'a>(env: Env<'a>, args: MapIterator) -> NifResult<Term<'a>> {
             "filter_type" => {
                 opts.filter_type = match value.atom_to_string()?.as_str() {
                     "fbf" => FilterType::Forgetful,
-                    _ => FilterType::Bloom
+                    _ => FilterType::Bloom,
                 }
             }
             "bitmap_size" => {
@@ -71,48 +73,28 @@ fn new<'a>(env: Env<'a>, args: MapIterator) -> NifResult<Term<'a>> {
         }
     }
 
-    let mut resource = FilterResource::default();
-
-    match opts.filter_type {
-        FilterType::Forgetful => {
-            resource.forgetful = RwLock::new(FilterContainer::new(ForgetfulFilter::new(opts)));
-            resource.current_type = FilterType::Forgetful;
-        }
-        FilterType::Bloom => {
-            resource.bloom = RwLock::new(FilterContainer::new(BloomFilter::new(opts)));
-            resource.current_type = FilterType::Bloom;
-        }
-    };
-
-    Ok((ok(), ResourceArc::new(resource)).encode(env))
+    let filt = Filter::new(opts);
+    Ok((ok(), ResourceArc::new(FilterResource::from(filt))).encode(env))
 }
 
 #[rustler::nif]
 fn ftype<'a>(env: Env<'a>, filter_ref: Term<'a>) -> NifResult<Term<'a>> {
     let resource: ResourceArc<FilterResource> = filter_ref.decode()?;
-    Ok((resource.current_type as u32).encode(env))
+    let filt_guard = resource.read();
+    Ok((filt_guard.filter_type() as u32).encode(env))
 }
 
 #[rustler::nif(name = "serialize", schedule = "DirtyIo")]
 fn serialize<'a>(env: Env<'a>, filter_ref: Term<'a>) -> NifResult<Term<'a>> {
     let resource: ResourceArc<FilterResource> = filter_ref.decode()?;
-    let serialized = match resource.current_type {
-        FilterType::Forgetful => {
-            resource.forgetful.read().unwrap().inner.serialize()
-        }
-        FilterType::Bloom => {
-            resource.bloom.read().unwrap().inner.serialize()
-        }
-    };
+    let serialized = resource.read().serialize();
     match serialized {
         Ok(bin_vec) => {
             let mut binary = OwnedBinary::new(bin_vec.len()).unwrap();
             binary.as_mut_slice().write_all(&bin_vec).unwrap();
             Ok((ok(), Binary::from_owned(binary, env)).encode(env))
         }
-        Err(_e) => {
-            Ok((error(), binencode()).encode(env))
-        }
+        Err(_e) => Ok((error(), binencode()).encode(env)),
     }
 }
 
@@ -123,42 +105,26 @@ fn deserialize<'a>(env: Env<'a>, serialized: Term<'a>) -> NifResult<Term<'a>> {
     } else {
         Binary::from_owned(serialized.to_binary(), env)
     };
-    let mut resource = FilterResource::default();
     match bincode::deserialize::<SerializedFilter>(&serialized.as_slice()[..]) {
         Ok(f) => {
-            match f.opts.filter_type {
-                FilterType::Forgetful => {
-                    resource.forgetful = RwLock::new(FilterContainer::new(ForgetfulFilter::restore(f)));
-                    resource.current_type = FilterType::Forgetful;
-                }
-                FilterType::Bloom => {
-                    resource.bloom = RwLock::new(FilterContainer::new(BloomFilter::restore(f)));
-                    resource.current_type = FilterType::Bloom;
-                }
-            }
-            Ok((ok(), ResourceArc::new(resource)).encode(env))
+            Ok((ok(), ResourceArc::new(FilterResource::from(Filter::restore(f)))).encode(env))
         }
-        Err(_e) => {
-            Ok((error(), bindecode()).encode(env))
-        }
+        Err(_e) => Ok((error(), bindecode()).encode(env)),
     }
 }
-
 
 #[rustler::nif]
 fn set<'a>(env: Env<'a>, filter_ref: Term<'a>, key: Term<'a>) -> NifResult<Term<'a>> {
     let resource: ResourceArc<FilterResource> = filter_ref.decode()?;
     let key = key_to_bin(env, key);
-
-    match resource.current_type {
-        FilterType::Forgetful => {
-            let filter = &mut resource.forgetful.write().unwrap().inner;
-            let member = filter.set(&key);
-
+    let mut filt_guard = resource.write();
+    match &mut *filt_guard {
+        Filter::Forgetful(filt) => {
+            let member = filt.set(&key);
             Ok(member.encode(env))
-        }
-        FilterType::Bloom => {
-            resource.bloom.write().unwrap().inner.set(&key);
+        },
+        Filter::Bloom(filt) => {
+            filt.set(&key);
             Ok(ok().encode(env))
         }
     }
@@ -168,25 +134,17 @@ fn set<'a>(env: Env<'a>, filter_ref: Term<'a>, key: Term<'a>) -> NifResult<Term<
 fn vcheck<'a>(env: Env<'a>, filter_ref: Term<'a>, key: Term<'a>) -> NifResult<Term<'a>> {
     let resource: ResourceArc<FilterResource> = filter_ref.decode()?;
     let key = key_to_bin(env, key);
-
-    match resource.current_type {
-        FilterType::Forgetful => {
-            let filter = &mut resource.forgetful.write().unwrap().inner;
-            Ok(filter.check(&key.as_slice().to_vec()).encode(env))
-        }
-        FilterType::Bloom => {
-            Ok(resource.bloom.read().unwrap().inner.check(&key.as_slice().to_vec()).encode(env))
-        }
-    }
+    let filt_guard = resource.read();
+    Ok(filt_guard.check(&key).encode(env))
 }
 
 #[rustler::nif]
 fn check_and_set<'a>(env: Env<'a>, filter_ref: Term<'a>, key: Term<'a>) -> NifResult<Term<'a>> {
     let resource: ResourceArc<FilterResource> = filter_ref.decode()?;
     let key = key_to_bin(env, key);
-
-    match resource.current_type {
-        FilterType::Bloom => Ok(resource.bloom.write().unwrap().inner.check_and_set(&key.as_slice().to_vec()).encode(env)),
+    let mut filt_guard = resource.write();
+    match &mut *filt_guard {
+        Filter::Bloom(filter) => Ok(filter.check_and_set(&key).encode(env)),
         _ => Ok((error(), wrong_filter_type()).encode(env)),
     }
 }
@@ -194,19 +152,9 @@ fn check_and_set<'a>(env: Env<'a>, filter_ref: Term<'a>, key: Term<'a>) -> NifRe
 #[rustler::nif]
 fn clear<'a>(env: Env<'a>, filter_ref: Term<'a>) -> NifResult<Term<'a>> {
     let resource: ResourceArc<FilterResource> = filter_ref.decode()?;
-
-    match resource.current_type {
-        FilterType::Forgetful => {
-            resource.forgetful.write().unwrap().inner.clear();
-        }
-        FilterType::Bloom => {
-            resource.bloom.write().unwrap().inner.clear();
-        }
-    }
-
+    resource.write().clear();
     Ok(ok().encode(env))
 }
-
 
 // check a serialized bloom for key membership without fully deserializing the bloom
 // specifically we want to avoid the very slow bitvec deserialization and simply compute
@@ -221,24 +169,17 @@ fn check_serialized<'a>(env: Env<'a>, serialized: Term<'a>, key: Term<'a>) -> Ni
     };
     let key = key_to_bin(env, key);
 
-    let resource = FilterResource::default();
     match bincode::deserialize::<SerializedFilter>(&serialized.as_slice()[..]) {
-        Ok(f) => {
-            match f.opts.filter_type {
-                FilterType::Bloom => {
-                    Ok((resource.bloom.read().unwrap().inner.check_serialized(f, &key)).encode(env))
-                }
-                _ => {
-                    Ok((error(), wrong_filter_type()).encode(env))
-                }
+        Ok(f) => match f.opts.filter_type {
+            FilterType::Bloom => {
+                let filter = BloomFilter::new(FilterOptions::default());
+                Ok((filter.check_serialized(f, &key)).encode(env))
             }
-        }
-        Err(_e) => {
-            Ok((error(), bindecode()).encode(env))
-        }
+            _ => Ok((error(), wrong_filter_type()).encode(env)),
+        },
+        Err(_e) => Ok((error(), bindecode()).encode(env)),
     }
 }
-
 
 // =================================================================================================
 // helpers
