@@ -5,6 +5,3 @@ services:
     image: elzor/erbloom_test
     volumes:
       - "./:/project"
-    tmpfs:
-      - /run
-      - /tmp
