@@ -22,3 +22,7 @@ jobs:
           toolchain: stable
     - name: Compile
       run: rebar3 compile
+    - name: Run EUnit tests
+      run: rebar3 as test eunit
+    - name: Run CT tests
+      run: rebar3 as test ct --spec ./test/spec.spec --sname tests --readable true --basic_html false
