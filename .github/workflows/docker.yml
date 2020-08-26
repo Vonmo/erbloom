@@ -1,4 +1,4 @@
-name: Docker CI
+name: CI
 
 on:
   push:
@@ -12,15 +12,13 @@ jobs:
 
     runs-on: ubuntu-latest
     
+    container:
+      image: erlang:23.0
+    
     steps:
     - uses: actions/checkout@v2
-    - name: Check folder
-      run: pwd
-    - name: Check files
-      run: ls -ltr
-    - name: Up containers
-      run: docker-compose -f docker-compose-ci.yml up -d
-    - name: Run tests
-      run: docker-compose -f docker-compose-ci.yml exec -T test bash -c "cd /project && make -f docker.mk tests"
-    - name: Down containers
-      run: docker-compose -f docker-compose-ci.yml down
+    - uses: actions-rs/toolchain@v1
+      with:
+          toolchain: stable
+    - name: Compile
+      run: rebar3 compile
