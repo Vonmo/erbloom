@@ -1,0 +1,22 @@
+name: Docker CI
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+
+  test:
+
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v2
+    - name: Up containers
+      run: UID=$UID GID=$GID docker-compose -f docker-compose-ci.yml up -d
+    - name: Run tests
+      run: UID=$UID GID=$GID docker-compose -f docker-compose-ci.yml exec test bash -c "cd /project && make -f docker.mk tests"
+    - name: Down containers
+      run: UID=$UID GID=$GID docker-compose -f docker-compose-ci.yml down
