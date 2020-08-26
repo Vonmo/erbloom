@@ -17,6 +17,6 @@ jobs:
     - name: Up containers
       run: docker-compose -f docker-compose-ci.yml up -d
     - name: Run tests
-      run: docker-compose -f docker-compose-ci.yml exec test bash -c "cd /project && make -f docker.mk tests"
+      run: docker-compose -f docker-compose-ci.yml exec test bash -c "cd /project && make -f docker.mk tests" -T
     - name: Down containers
       run: docker-compose -f docker-compose-ci.yml down
