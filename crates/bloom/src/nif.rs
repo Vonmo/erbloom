@@ -78,15 +78,13 @@ fn new<'a>(env: Env<'a>, args: MapIterator) -> NifResult<Term<'a>> {
 }
 
 #[rustler::nif]
-fn ftype<'a>(env: Env<'a>, filter_ref: Term<'a>) -> NifResult<Term<'a>> {
-    let resource: ResourceArc<FilterResource> = filter_ref.decode()?;
+fn ftype<'a>(env: Env<'a>, resource: ResourceArc<FilterResource>) -> NifResult<Term<'a>> {
     let filt_guard = resource.read();
     Ok((filt_guard.filter_type() as u32).encode(env))
 }
 
 #[rustler::nif(name = "serialize", schedule = "DirtyIo")]
-fn serialize<'a>(env: Env<'a>, filter_ref: Term<'a>) -> NifResult<Term<'a>> {
-    let resource: ResourceArc<FilterResource> = filter_ref.decode()?;
+fn serialize<'a>(env: Env<'a>, resource: ResourceArc<FilterResource>) -> NifResult<Term<'a>> {
     let serialized = resource.read().serialize();
     match serialized {
         Ok(bin_vec) => {
@@ -99,8 +97,7 @@ fn serialize<'a>(env: Env<'a>, filter_ref: Term<'a>) -> NifResult<Term<'a>> {
 }
 
 #[rustler::nif(name = "deserialize", schedule = "DirtyIo")]
-fn deserialize<'a>(env: Env<'a>, serialized: Term<'a>) -> NifResult<Term<'a>> {
-    let serialized = LazyBinary::from_term(serialized);
+fn deserialize<'a>(env: Env<'a>, serialized: LazyBinary<'a>) -> NifResult<Term<'a>> {
     match bincode::deserialize::<SerializedFilter>(&serialized) {
         Ok(f) => {
             Ok((ok(), ResourceArc::new(FilterResource::from(Filter::restore(f)))).encode(env))
@@ -110,9 +107,7 @@ fn deserialize<'a>(env: Env<'a>, serialized: Term<'a>) -> NifResult<Term<'a>> {
 }
 
 #[rustler::nif]
-fn set<'a>(env: Env<'a>, filter_ref: Term<'a>, key: Term<'a>) -> NifResult<Term<'a>> {
-    let resource: ResourceArc<FilterResource> = filter_ref.decode()?;
-    let key = LazyBinary::from_term(key);
+fn set<'a>(env: Env<'a>, resource: ResourceArc<FilterResource>, key: LazyBinary<'a>) -> NifResult<Term<'a>> {
     let mut filt_guard = resource.write();
     match &mut *filt_guard {
         Filter::Forgetful(filt) => {
@@ -127,17 +122,13 @@ fn set<'a>(env: Env<'a>, filter_ref: Term<'a>, key: Term<'a>) -> NifResult<Term<
 }
 
 #[rustler::nif]
-fn vcheck<'a>(env: Env<'a>, filter_ref: Term<'a>, key: Term<'a>) -> NifResult<Term<'a>> {
-    let resource: ResourceArc<FilterResource> = filter_ref.decode()?;
-    let key = LazyBinary::from_term(key);
+fn vcheck<'a>(env: Env<'a>, resource: ResourceArc<FilterResource>, key: LazyBinary<'a>) -> NifResult<Term<'a>> {
     let filt_guard = resource.read();
     Ok(filt_guard.check(&key).encode(env))
 }
 
 #[rustler::nif]
-fn check_and_set<'a>(env: Env<'a>, filter_ref: Term<'a>, key: Term<'a>) -> NifResult<Term<'a>> {
-    let resource: ResourceArc<FilterResource> = filter_ref.decode()?;
-    let key = LazyBinary::from_term(key);
+fn check_and_set<'a>(env: Env<'a>, resource: ResourceArc<FilterResource>, key: LazyBinary<'a>) -> NifResult<Term<'a>> {
     let mut filt_guard = resource.write();
     match &mut *filt_guard {
         Filter::Bloom(filter) => Ok(filter.check_and_set(&key).encode(env)),
@@ -146,8 +137,7 @@ fn check_and_set<'a>(env: Env<'a>, filter_ref: Term<'a>, key: Term<'a>) -> NifRe
 }
 
 #[rustler::nif]
-fn clear<'a>(env: Env<'a>, filter_ref: Term<'a>) -> NifResult<Term<'a>> {
-    let resource: ResourceArc<FilterResource> = filter_ref.decode()?;
+fn clear<'a>(env: Env<'a>, resource: ResourceArc<FilterResource>) -> NifResult<Term<'a>> {
     resource.write().clear();
     Ok(ok().encode(env))
 }
@@ -157,10 +147,7 @@ fn clear<'a>(env: Env<'a>, filter_ref: Term<'a>) -> NifResult<Term<'a>> {
 // the hash keys manually and check them inside the Erlang binary by hand
 // for a 50mb bloom, this improves checking a serialized bloom from 25 seconds to 35 microseconds
 #[rustler::nif]
-fn check_serialized<'a>(env: Env<'a>, serialized: Term<'a>, key: Term<'a>) -> NifResult<Term<'a>> {
-    let serialized = LazyBinary::from_term(serialized);
-    let key = LazyBinary::from_term(key);
-
+fn check_serialized<'a>(env: Env<'a>, serialized: LazyBinary<'a>, key: LazyBinary<'a>) -> NifResult<Term<'a>> {
     match bincode::deserialize::<SerializedFilter>(&serialized) {
         Ok(f) => match f.opts.filter_type {
             FilterType::Bloom => {
@@ -200,12 +187,12 @@ impl<'a> std::ops::Deref for LazyBinary<'a> {
     }
 }
 
-impl<'a> LazyBinary<'a> {
-    fn from_term(term: Term<'a>) -> Self {
+impl<'a> rustler::Decoder<'a> for LazyBinary<'a> {
+    fn decode(term: Term<'a>) -> NifResult<Self> {
         if term.is_binary() {
-            Self::Borrowed(Binary::from_term(term).unwrap())
+            Ok(Self::Borrowed(Binary::from_term(term)?))
         } else {
-            Self::Owned(term.to_binary())
+            Ok(Self::Owned(term.to_binary()))
         }
     }
 }
