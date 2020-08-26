@@ -1,0 +1,11 @@
+version: '3.2'
+services:
+  test:
+    container_name: erbloom.test
+    image: elzor/erbloom_test
+    user: "${UID:?Please export UID}:${GID:?Please export GID}"
+    volumes:
+      - "./:/project"
+    tmpfs:
+      - /run
+      - /tmp
