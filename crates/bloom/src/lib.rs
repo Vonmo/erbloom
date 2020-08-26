@@ -8,8 +8,7 @@ extern crate siphasher;
 mod atoms;
 mod options;
 mod container;
-mod bloom;
-mod forgetful;
+mod filter;
 mod nif;
 
 rustler::init!(

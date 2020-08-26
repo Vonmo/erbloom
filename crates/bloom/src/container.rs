@@ -1,28 +1,6 @@
 use serde::{Deserialize, Serialize};
 use options::FilterOptions;
 
-#[derive(Serialize, Deserialize, PartialEq, Clone, Copy)]
-pub enum FilterType {
-    Bloom,
-    Forgetful,
-}
-
-// =================================================================================================
-
-pub struct FilterContainer<T> {
-    pub inner: T,
-}
-
-impl<T> FilterContainer<T> {
-    pub fn new(filter: T) -> FilterContainer<T> {
-        FilterContainer {
-            inner: filter,
-        }
-    }
-}
-
-// =================================================================================================
-
 #[derive(Serialize, Deserialize, PartialEq, Clone)]
 pub struct RawSerializedFilter {
     pub payload: Vec<u8>,

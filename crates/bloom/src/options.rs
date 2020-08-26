@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use container::FilterType;
+use filter::FilterType;
 
 #[derive(Serialize, Deserialize, PartialEq, Clone, Copy)]
 pub struct FilterOptions {

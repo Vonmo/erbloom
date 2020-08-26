@@ -2,11 +2,12 @@ use std::error;
 
 use bloomfilter::Bloom;
 
-use container::{FilterType, RawSerializedFilter, SerializedFilter};
+use container::{RawSerializedFilter, SerializedFilter};
 use options::FilterOptions;
 use siphasher::sip::SipHasher13;
 use std::hash::Hash;
 use std::hash::Hasher;
+use super::FilterType;
 
 type Result<T> = std::result::Result<T, Box<dyn error::Error>>;
 
@@ -31,15 +32,15 @@ impl BloomFilter {
         }
     }
 
-    pub fn set(&mut self, key: &Vec<u8>) {
+    pub fn set(&mut self, key: &[u8]) {
         self.filter.set(key)
     }
 
-    pub fn check(&self, key: &Vec<u8>) -> bool {
+    pub fn check(&self, key: &[u8]) -> bool {
         self.filter.check(key)
     }
 
-    pub fn check_serialized(&self, filter: SerializedFilter, key: &Vec<u8>) -> bool {
+    pub fn check_serialized(&self, filter: SerializedFilter, key: &[u8]) -> bool {
         let pf = &filter.filters.to_vec()[0];
         let sips = [
             SipHasher13::new_with_keys(pf.sip00, pf.sip01),
@@ -57,7 +58,7 @@ impl BloomFilter {
         true
     }
 
-    pub fn check_and_set(&mut self, key: &Vec<u8>) -> bool {
+    pub fn check_and_set(&mut self, key: &[u8]) -> bool {
         self.filter.check_and_set(key)
     }
 
