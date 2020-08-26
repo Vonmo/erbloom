@@ -1,7 +1,7 @@
 # erbloom
 Safe and Fast Bloom Filter + FBFs for Erlang
 
-[![Build Status](https://travis-ci.org/Vonmo/erbloom.svg?branch=master)](https://travis-ci.org/Vonmo/erbloom)
+![CI](https://github.com/Vonmo/erbloom/workflows/CI/badge.svg?branch=master)
 
 [Online Documentation](https://hexdocs.pm/erbloom/)
 
