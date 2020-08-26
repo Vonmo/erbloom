@@ -100,12 +100,8 @@ fn serialize<'a>(env: Env<'a>, filter_ref: Term<'a>) -> NifResult<Term<'a>> {
 
 #[rustler::nif(name = "deserialize", schedule = "DirtyIo")]
 fn deserialize<'a>(env: Env<'a>, serialized: Term<'a>) -> NifResult<Term<'a>> {
-    let serialized: Binary = if serialized.is_binary() {
-        serialized.decode()?
-    } else {
-        Binary::from_owned(serialized.to_binary(), env)
-    };
-    match bincode::deserialize::<SerializedFilter>(&serialized.as_slice()[..]) {
+    let serialized = LazyBinary::from_term(serialized);
+    match bincode::deserialize::<SerializedFilter>(&serialized) {
         Ok(f) => {
             Ok((ok(), ResourceArc::new(FilterResource::from(Filter::restore(f)))).encode(env))
         }
@@ -116,7 +112,7 @@ fn deserialize<'a>(env: Env<'a>, serialized: Term<'a>) -> NifResult<Term<'a>> {
 #[rustler::nif]
 fn set<'a>(env: Env<'a>, filter_ref: Term<'a>, key: Term<'a>) -> NifResult<Term<'a>> {
     let resource: ResourceArc<FilterResource> = filter_ref.decode()?;
-    let key = key_to_bin(env, key);
+    let key = LazyBinary::from_term(key);
     let mut filt_guard = resource.write();
     match &mut *filt_guard {
         Filter::Forgetful(filt) => {
@@ -133,7 +129,7 @@ fn set<'a>(env: Env<'a>, filter_ref: Term<'a>, key: Term<'a>) -> NifResult<Term<
 #[rustler::nif]
 fn vcheck<'a>(env: Env<'a>, filter_ref: Term<'a>, key: Term<'a>) -> NifResult<Term<'a>> {
     let resource: ResourceArc<FilterResource> = filter_ref.decode()?;
-    let key = key_to_bin(env, key);
+    let key = LazyBinary::from_term(key);
     let filt_guard = resource.read();
     Ok(filt_guard.check(&key).encode(env))
 }
@@ -141,7 +137,7 @@ fn vcheck<'a>(env: Env<'a>, filter_ref: Term<'a>, key: Term<'a>) -> NifResult<Te
 #[rustler::nif]
 fn check_and_set<'a>(env: Env<'a>, filter_ref: Term<'a>, key: Term<'a>) -> NifResult<Term<'a>> {
     let resource: ResourceArc<FilterResource> = filter_ref.decode()?;
-    let key = key_to_bin(env, key);
+    let key = LazyBinary::from_term(key);
     let mut filt_guard = resource.write();
     match &mut *filt_guard {
         Filter::Bloom(filter) => Ok(filter.check_and_set(&key).encode(env)),
@@ -162,14 +158,10 @@ fn clear<'a>(env: Env<'a>, filter_ref: Term<'a>) -> NifResult<Term<'a>> {
 // for a 50mb bloom, this improves checking a serialized bloom from 25 seconds to 35 microseconds
 #[rustler::nif]
 fn check_serialized<'a>(env: Env<'a>, serialized: Term<'a>, key: Term<'a>) -> NifResult<Term<'a>> {
-    let serialized: Binary = if serialized.is_binary() {
-        serialized.decode()?
-    } else {
-        Binary::from_owned(serialized.to_binary(), env)
-    };
-    let key = key_to_bin(env, key);
+    let serialized = LazyBinary::from_term(serialized);
+    let key = LazyBinary::from_term(key);
 
-    match bincode::deserialize::<SerializedFilter>(&serialized.as_slice()[..]) {
+    match bincode::deserialize::<SerializedFilter>(&serialized) {
         Ok(f) => match f.opts.filter_type {
             FilterType::Bloom => {
                 let filter = BloomFilter::new(FilterOptions::default());
@@ -181,14 +173,39 @@ fn check_serialized<'a>(env: Env<'a>, serialized: Term<'a>, key: Term<'a>) -> Ni
     }
 }
 
+
 // =================================================================================================
 // helpers
 // =================================================================================================
-fn key_to_bin<'a>(env: Env<'a>, key: Term<'a>) -> Vec<u8> {
-    let bin = if key.is_binary() {
-        Binary::from_term(key).unwrap()
-    } else {
-        Binary::from_owned(key.to_binary(), env)
-    };
-    bin.as_slice().to_vec()
+
+/// Represents either a borrowed `Binary` or `OwnedBinary`.
+///
+/// `LazyBinary` allows for the most efficient conversion from an
+/// Erlang term to a byte slice. If the term is an actual Erlang
+/// binary, constructing `LazyBinary` is essentially
+/// zero-cost. However, if the term is any other Erlang type, it is
+/// converted to an `OwnedBinary`, which requires a heap allocation.
+enum LazyBinary<'a> {
+    Owned(OwnedBinary),
+    Borrowed(Binary<'a>),
+}
+
+impl<'a> std::ops::Deref for LazyBinary<'a> {
+    type Target = [u8];
+    fn deref(&self) -> &[u8] {
+        match self {
+            Self::Owned(owned) => owned.as_ref(),
+            Self::Borrowed(borrowed) => borrowed.as_ref(),
+        }
+    }
+}
+
+impl<'a> LazyBinary<'a> {
+    fn from_term(term: Term<'a>) -> Self {
+        if term.is_binary() {
+            Self::Borrowed(Binary::from_term(term).unwrap())
+        } else {
+            Self::Owned(term.to_binary())
+        }
+    }
 }
