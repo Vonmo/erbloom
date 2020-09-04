@@ -2,11 +2,11 @@ use std::io::Write;
 use std::sync::{RwLock, RwLockReadGuard, RwLockWriteGuard};
 
 use rustler::resource::ResourceArc;
-use rustler::{Binary, Encoder, Env, MapIterator, NifResult, OwnedBinary, Term};
+use rustler::{Binary, Encoder, Env, NifResult, OwnedBinary, Term};
 
 use atoms::{bindecode, binencode, error, ok, wrong_filter_type};
-use filter::{BloomFilter, Filter, FilterType};
 use container::SerializedFilter;
+use filter::{BloomFilter, Filter, FilterType};
 use options::FilterOptions;
 
 // =================================================================================================
@@ -42,38 +42,8 @@ pub fn on_load(env: Env, _load_info: Term) -> bool {
 // =================================================================================================
 
 #[rustler::nif]
-fn new<'a>(env: Env<'a>, args: MapIterator) -> NifResult<Term<'a>> {
-    let mut opts = FilterOptions::default();
-
-    for (key, value) in args {
-        let param = key.atom_to_string()?;
-        match param.as_str() {
-            "filter_type" => {
-                opts.filter_type = match value.atom_to_string()?.as_str() {
-                    "fbf" => FilterType::Forgetful,
-                    _ => FilterType::Bloom,
-                }
-            }
-            "bitmap_size" => {
-                opts.bitmap_size = value.decode()?;
-            }
-            "items_count" => {
-                opts.items_count = value.decode()?;
-            }
-            "capacity" => {
-                opts.capacity = value.decode()?;
-            }
-            "rotate_at" => {
-                opts.rotate_at = value.decode()?;
-            }
-            "fp_rate" => {
-                opts.fp_rate = value.decode()?;
-            }
-            _ => {}
-        }
-    }
-
-    let filt = Filter::new(opts);
+fn new<'a>(env: Env<'a>, opts: FilterOptions) -> NifResult<Term<'a>> {
+    let filt = Filter::new(opts).map_err(|e| rustler::error::Error::Term(Box::new(e)))?;
     Ok((ok(), ResourceArc::new(FilterResource::from(filt))).encode(env))
 }
 
@@ -99,9 +69,11 @@ fn serialize<'a>(env: Env<'a>, resource: ResourceArc<FilterResource>) -> NifResu
 #[rustler::nif(name = "deserialize", schedule = "DirtyIo")]
 fn deserialize<'a>(env: Env<'a>, serialized: LazyBinary<'a>) -> NifResult<Term<'a>> {
     match bincode::deserialize::<SerializedFilter>(&serialized) {
-        Ok(f) => {
-            Ok((ok(), ResourceArc::new(FilterResource::from(Filter::restore(f)))).encode(env))
-        }
+        Ok(f) => Ok((
+            ok(),
+            ResourceArc::new(FilterResource::from(Filter::restore(f).unwrap())),
+        )
+            .encode(env)),
         Err(_e) => Ok((error(), bindecode()).encode(env)),
     }
 }
@@ -113,7 +85,7 @@ fn set<'a>(env: Env<'a>, resource: ResourceArc<FilterResource>, key: LazyBinary<
         Filter::Forgetful(filt) => {
             let member = filt.set(&key);
             Ok(member.encode(env))
-        },
+        }
         Filter::Bloom(filt) => {
             filt.set(&key);
             Ok(ok().encode(env))
@@ -128,7 +100,11 @@ fn vcheck<'a>(env: Env<'a>, resource: ResourceArc<FilterResource>, key: LazyBina
 }
 
 #[rustler::nif]
-fn check_and_set<'a>(env: Env<'a>, resource: ResourceArc<FilterResource>, key: LazyBinary<'a>) -> NifResult<Term<'a>> {
+fn check_and_set<'a>(
+    env: Env<'a>,
+    resource: ResourceArc<FilterResource>,
+    key: LazyBinary<'a>,
+) -> NifResult<Term<'a>> {
     let mut filt_guard = resource.write();
     match &mut *filt_guard {
         Filter::Bloom(filter) => Ok(filter.check_and_set(&key).encode(env)),
@@ -150,8 +126,22 @@ fn clear<'a>(env: Env<'a>, resource: ResourceArc<FilterResource>) -> NifResult<T
 fn check_serialized<'a>(env: Env<'a>, serialized: LazyBinary<'a>, key: LazyBinary<'a>) -> NifResult<Term<'a>> {
     match bincode::deserialize::<SerializedFilter>(&serialized) {
         Ok(f) => match f.opts.filter_type {
-            FilterType::Bloom => {
-                let filter = BloomFilter::new(FilterOptions::default());
+            Some(FilterType::Bloom) => {
+                // TODO: The following block contains values
+                // originally filled in by
+                // `FilterOptions::default()`. Are these values
+                // meaningful in any away? Is there a more elegent
+                // solution to keep this `check_serialized()` working
+                // correctly?
+                //
+                let opts = {
+                    let mut opts = FilterOptions::default();
+                    opts.filter_type = Some(FilterType::Bloom);
+                    opts.items_count = Some(100);
+                    opts.bitmap_size = Some(10);
+                    opts
+                };
+                let filter = BloomFilter::new(opts).unwrap();
                 Ok((filter.check_serialized(f, &key)).encode(env))
             }
             _ => Ok((error(), wrong_filter_type()).encode(env)),

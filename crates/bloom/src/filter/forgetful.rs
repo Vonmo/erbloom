@@ -1,46 +1,58 @@
-use std::error;
-
+use super::FilterType;
 use bloomfilter::Bloom;
-
 use container::{RawSerializedFilter, SerializedFilter};
 use options::FilterOptions;
-use super::FilterType;
 
-type Result<T> = std::result::Result<T, Box<dyn error::Error>>;
+type Result<T> = std::result::Result<T, String>;
 
 pub struct ForgetfulFilter {
     pub filters: Vec<Bloom<[u8]>>,
-    pub bitmap_size: usize,
     pub items_count: usize,
     pub capacity: usize,
     pub rotate_at: usize,
     pub insertion_count: usize,
-    pub fp_rate: f64,
 }
 
 impl ForgetfulFilter {
-    pub fn new(opts: FilterOptions) -> ForgetfulFilter {
-        let mut forgetfulfilter = ForgetfulFilter {
-            filters: Vec::with_capacity(opts.capacity),
-            bitmap_size: opts.bitmap_size,
-            items_count: opts.items_count,
-            capacity: opts.capacity,
-            rotate_at: opts.rotate_at,
-            fp_rate: opts.fp_rate,
-            insertion_count: 0,
-        };
+    pub fn new(opts: FilterOptions) -> Result<ForgetfulFilter> {
+        assert_eq!(opts.filter_type, Some(FilterType::Forgetful));
 
-        for _x in 0..opts.capacity {
-            forgetfulfilter
-                .filters
-                .push(if opts.items_count > 0 && opts.bitmap_size == 0 {
-                    Bloom::new_for_fp_rate(opts.items_count as usize, opts.fp_rate)
-                } else {
-                    Bloom::new(opts.bitmap_size, opts.items_count)
-                })
+        let capacity = opts.capacity.ok_or("capacity not set")?;
+        let rotate_at = opts.rotate_at.ok_or("rotate_at  not set")?;
+        let items_count = opts.items_count.ok_or("items_count not set")?;
+
+        let mut filters = Vec::with_capacity(capacity);
+        for _ in 0..capacity {
+            let filter = match opts {
+                FilterOptions {
+                    bitmap_size: Some(bitmap_size),
+                    items_count: Some(items_count),
+                    fp_rate: None,
+                    ..
+                } => Bloom::new(bitmap_size, items_count),
+                FilterOptions {
+                    bitmap_size: None,
+                    items_count: Some(items_count),
+                    fp_rate: Some(fp_rate),
+                    ..
+                } => Bloom::new_for_fp_rate(items_count, fp_rate),
+                _ => {
+                    return Err(format!(
+                        "must set `items_count` AND (`fp_rate` OR `bitmap_size`)], got {:?}",
+                        opts
+                    ))
+                }
+            };
+            filters.push(filter)
         }
 
-        forgetfulfilter
+        Ok(ForgetfulFilter {
+            filters,
+            items_count,
+            capacity,
+            rotate_at,
+            insertion_count: 0,
+        })
     }
 
     pub fn set(&mut self, key: &[u8]) -> bool {
@@ -93,20 +105,18 @@ impl ForgetfulFilter {
         let num_inner_filters = self.filters.len();
         for x in 0..num_inner_filters - 2 {
             self.filters[x].clear()
-        };
+        }
     }
 
     pub fn serialize(&self) -> Result<Vec<u8>> {
         let mut opts = FilterOptions::default();
-        opts.filter_type = FilterType::Forgetful;
-        opts.bitmap_size = self.bitmap_size;
-        opts.items_count = self.items_count;
-        opts.capacity = self.capacity;
-        opts.rotate_at = self.rotate_at;
-        opts.fp_rate = self.fp_rate;
+        opts.filter_type = Some(FilterType::Forgetful);
+        opts.items_count = Some(self.items_count);
+        opts.capacity = Some(self.capacity);
+        opts.rotate_at = Some(self.rotate_at);
 
         let mut serialized_filters: Vec<RawSerializedFilter> = vec![];
-        for i in 0..opts.capacity {
+        for i in 0..self.capacity {
             let filter = &self.filters[i];
             let sips = filter.sip_keys();
             let bitmap = filter.bitmap();
@@ -120,20 +130,18 @@ impl ForgetfulFilter {
                 sip11: sips[1].1,
             })
         }
-        match bincode::serialize(&SerializedFilter {
+        bincode::serialize(&SerializedFilter {
             filters: serialized_filters,
-            opts: opts,
+            opts,
             upsert_num: self.insertion_count as u64,
-        }) {
-            Ok(res) => Ok(res),
-            Err(e) => Err(e)
-        }
+        })
+        .map_err(|e| format!("bincode serialization failed with: {}", e))
     }
 
     pub fn restore(prev_filter: SerializedFilter) -> ForgetfulFilter {
         let mut filters: Vec<Bloom<[u8]>> = vec![];
 
-        for i in 0..prev_filter.opts.capacity {
+        for i in 0..prev_filter.opts.capacity.unwrap() {
             let pf = &prev_filter.filters.to_vec()[i];
             filters.push(Bloom::from_existing(
                 &pf.payload,
@@ -144,12 +152,10 @@ impl ForgetfulFilter {
         }
 
         ForgetfulFilter {
-            filters: filters,
-            bitmap_size: prev_filter.opts.bitmap_size,
-            items_count: prev_filter.opts.items_count,
-            capacity: prev_filter.opts.capacity,
-            rotate_at: prev_filter.opts.rotate_at,
-            fp_rate: prev_filter.opts.fp_rate,
+            filters,
+            items_count: prev_filter.opts.items_count.unwrap(),
+            capacity: prev_filter.opts.capacity.unwrap(),
+            rotate_at: prev_filter.opts.rotate_at.unwrap(),
             insertion_count: prev_filter.upsert_num as usize,
         }
     }
