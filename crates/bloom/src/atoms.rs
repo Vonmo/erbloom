@@ -6,5 +6,13 @@ rustler::atoms! {
     undefined,
     binencode,
     bindecode,
-    wrong_filter_type
+    wrong_filter_type,
+    bitmap_size,
+    bloom,
+    capacity,
+    fbf,
+    filter_type,
+    fp_rate,
+    items_count,
+    rotate_at,
 }

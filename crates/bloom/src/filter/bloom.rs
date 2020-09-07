@@ -1,35 +1,41 @@
-use std::error;
-
+use super::FilterType;
 use bloomfilter::Bloom;
-
 use container::{RawSerializedFilter, SerializedFilter};
 use options::FilterOptions;
 use siphasher::sip::SipHasher13;
 use std::hash::Hash;
 use std::hash::Hasher;
-use super::FilterType;
 
-type Result<T> = std::result::Result<T, Box<dyn error::Error>>;
+type Result<T> = std::result::Result<T, String>;
 
 pub struct BloomFilter {
     pub filter: Bloom<[u8]>,
-    pub bitmap_size: usize,
-    pub items_count: usize,
-    pub fp_rate: f64,
 }
 
 impl BloomFilter {
-    pub fn new(opts: FilterOptions) -> BloomFilter {
-        BloomFilter {
-            filter: if opts.items_count > 0 && opts.bitmap_size == 0 {
-                Bloom::new_for_fp_rate(opts.items_count as usize, opts.fp_rate)
-            } else {
-                Bloom::new(opts.bitmap_size, opts.items_count)
+    pub fn new(opts: FilterOptions) -> Result<BloomFilter> {
+        assert_eq!(opts.filter_type, Some(FilterType::Bloom));
+        Ok(BloomFilter {
+            filter: match opts {
+                FilterOptions {
+                    bitmap_size: None,
+                    items_count: Some(items_count),
+                    fp_rate: Some(fp_rate),
+                    ..
+                } => Bloom::new_for_fp_rate(items_count, fp_rate),
+                FilterOptions {
+                    bitmap_size: Some(bitmap_size),
+                    items_count: Some(items_count),
+                    ..
+                } => Bloom::new(bitmap_size, items_count),
+                _ => {
+                    return Err(format!(
+                        "must set `items_count` AND (`fp_rate` OR `bitmap_size`)], got {:?}",
+                        opts
+                    ))
+                }
             },
-            bitmap_size: opts.bitmap_size,
-            items_count: opts.items_count,
-            fp_rate: opts.fp_rate,
-        }
+        })
     }
 
     pub fn set(&mut self, key: &[u8]) {
@@ -68,10 +74,7 @@ impl BloomFilter {
 
     pub fn serialize(&self) -> Result<Vec<u8>> {
         let mut opts = FilterOptions::default();
-        opts.filter_type = FilterType::Bloom;
-        opts.bitmap_size = self.bitmap_size;
-        opts.items_count = self.items_count;
-        opts.fp_rate = self.fp_rate;
+        opts.filter_type = Some(FilterType::Bloom);
 
         let sips = self.filter.sip_keys();
         let bitmap = self.filter.bitmap();
@@ -85,11 +88,11 @@ impl BloomFilter {
                 sip10: sips[1].0,
                 sip11: sips[1].1,
             }],
-            opts: opts,
+            opts,
             upsert_num: 0,
         }) {
             Ok(res) => Ok(res),
-            Err(e) => Err(e)
+            Err(e) => Err(format!("bincode serialization failed with: {}", e)),
         }
     }
 
@@ -103,9 +106,6 @@ impl BloomFilter {
                 pf.num_funs,
                 [(pf.sip00, pf.sip01), (pf.sip10, pf.sip11)],
             ),
-            bitmap_size: prev_filter.opts.bitmap_size,
-            items_count: prev_filter.opts.items_count,
-            fp_rate: prev_filter.opts.fp_rate,
         }
     }
 }
