@@ -3,6 +3,7 @@ name = "bloom"
 version = "0.2.0"
 authors = ["Maxim Molchanov <m.molchanov@vonmo.com>"]
 license = "MIT/Apache-2.0"
+build = "build.rs"
 
 [lib]
 name = "bloom"
