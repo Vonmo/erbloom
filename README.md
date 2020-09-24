@@ -9,6 +9,11 @@ Safe and Fast Bloom Filter + FBFs for Erlang
 * [Bloom filter structure](https://en.wikipedia.org/wiki/Bloom_filter) (type: `bloom`)
 * [Forgetful Bloom Filters](http://dprg.cs.uiuc.edu/docs/fbf_cac15/fbfpaper-2.pdf) (type: `fbf`)
 
+## Supported OS:
+* linux
+* macos
+* windows
+
 ## Deps definition:
 mix.exs:
 `{:erbloom, "~> 2.1.0-rc.2"}`
