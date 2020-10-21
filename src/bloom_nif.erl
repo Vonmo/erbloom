@@ -29,7 +29,7 @@
 -export_type([bloom/0, serialized_bloom/0]).
 
 %% @doc Create a new filter structure.
--spec new(_Opts :: map) -> {ok, Bloom :: bloom()} | {error, Reason :: binary()}.
+-spec new(_Opts :: map()) -> {ok, Bloom :: bloom()} | {error, Reason :: binary()}.
 new(_Opts) ->
   not_loaded(?LINE).
 
