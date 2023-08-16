@@ -11,7 +11,7 @@ crate-type = ["dylib"]
 
 [dependencies]
 bincode = "1.2.1"
-rustler = "0.22.0-rc.0"
+rustler = "0.29.1"
 bloomfilter = "1.0.2"
 siphasher = "0.3.3"
 serde = { version = "1.0", features = ["derive"] }
